@@ -6,10 +6,14 @@ BeginPackage["NumericalMethods`"];
 If[!ValueQ[NumericalMethods::usage],NumericalMethods::usage="NumericalMethods` provides functions for various root-finding techniques and iterative solutions."];
 If[!ValueQ[Bisection::usage],Bisection::usage="Bisection[ func, {lower, upper} ] approximates the root of < func > in the interval x \[Element] [lower,upper]."];
 If[!ValueQ[FalsePosition::usage],FalsePosition::usage="FalsePosition[ func, {lower,upper} ] approximates the roof of < func > in the interval x\[Element] [lower,upper]."];
+If[!ValueQ[NewtonRaphson::usage],NewtonRaphson::usage="NewtonRaphson[ func, x0 ] approximates the root."];
+If[!ValueQ[ModifiedSecant::usage],ModifiedSecant::usage="ModifiedSecant[ f, x0, dx ] approximates the root"];
 
 
 Options[Bisection]={MaxSteps->10};
 Options[FalsePosition]={MaxSteps->10};
+Options[NewtonRaphson]={MaxSteps,Tolerance};
+Options[ModifiedSecant]={MaxSteps,Tolerance};
 Begin["`Private`"];
 
 
@@ -35,6 +39,25 @@ NumericQ[NewtonRaphson]^=True;
 NewtonRaphson[f:_Function|_Symbol,x_,opts___Rule]:=Block[{steps,tol,g},tol=Tolerance/. {opts}/. Tolerance->1;steps=MaxSteps/. {opts}/. MaxSteps->1;g=#1-f[#1]/Derivative[1][f][#1]&;(Which[tol!=1,FixedPointList[#1,N[#2],SameTest->(Abs[#1-#2]<tol&)],steps!=1,FixedPointList[#1,N[#2],steps],True,FixedPointList[#1,N[#2],10]]&)[g,x]];
 NewtonRaphson[f_,x_,opts___Rule]:=Message[NewtonRaphson::badarg,{f,x}];
 NewtonRaphson[args___/;Length[{args}]<2]:=Message[NumericalMethods::badarg,NewtonRaphson,Length[{args}],2];
+
+
+ModifiedSecant::badarg="The first argument must be a function. The second an initial guess. The third a small perterbation factor. You entered '1'.";
+NumericQ[ModifiedSecant]^=True;
+ModifiedSecant[f:(_Function|_Symbol),x0_,pert_,opts___Rule]:=Block[{steps,tol,g},
+steps=MaxSteps/.{opts}/.MaxSteps->1;
+tol=Tolerance/.{opts}/.Tolerance->1;
+g=#-(pert f[#])/(f[#+pert #]-f[#])&;
+Which[
+steps!=1,
+FixedPointList[#,#2,steps],
+tol!=1,
+FixedPointList[#,#2,SameTest->(Abs[#1-#2]>tol&)],
+True,
+FixedPointList[#,#2]]&[g,x0]];
+
+ModifiedSecant[f_,x_,pert_,opts___Rule]:=Message[ModifiedSecant::badarg,{f,x,pert}];
+ModifiedSecant[args___/;Length[{args}<3]]:=Message[NumericalMethods::badarg,ModifiedSecant,Length[{args}],3];
+
 
 
 End[];
